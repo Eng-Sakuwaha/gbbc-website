@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "node -e \"try{require('esbuild/install')}catch(e){console.log('esbuild install skipped:',e.message)}\""
   },
   "dependencies": {
     "axios": "^1.7.5",
@@ -17,5 +18,8 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.0"
+  },
+  "config": {
+    "allow-scripts": ["esbuild"]
   }
 }
