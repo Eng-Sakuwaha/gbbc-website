@@ -17,7 +17,7 @@ const app = express();
 // Trust first proxy (Render, nginx, etc.)
 app.set('trust proxy', 1);
 
-// Long timeouts for large uploads (5 minutes)
+// Long timeouts for large uploads
 app.use((req, res, next) => {
   req.setTimeout(5 * 60 * 1000);
   res.setTimeout(5 * 60 * 1000);
@@ -29,18 +29,9 @@ app.use(helmet({
   contentSecurityPolicy: false
 }));
 
-// CORS — allow CLIENT_URL or same-origin
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  'http://localhost:5173'
-].filter(Boolean);
-
+// CORS — allow all origins (safe because we serve the frontend from the same domain)
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(null, true); // Same-origin requests from served frontend
-  },
+  origin: true,
   credentials: true
 }));
 
@@ -48,7 +39,7 @@ app.use(express.json({ limit: '5mb' }));
 app.use(morgan('dev'));
 
 /* =========================================================
-   Serve uploaded media with guaranteed MIME types
+   1. Serve uploaded media with guaranteed MIME types
    ========================================================= */
 const UPLOADS_DIR = path.resolve('uploads');
 
@@ -85,7 +76,7 @@ app.use(
 );
 
 /* =========================================================
-   API routes
+   2. API routes
    ========================================================= */
 const apiLimiter = rateLimit({
   windowMs: 60_000,
@@ -98,13 +89,13 @@ const apiLimiter = rateLimit({
 app.use('/api', apiLimiter);
 app.use('/api', routes);
 
-// 404 for unknown API routes
+// 404 for unknown API routes (does not affect frontend routes)
 app.use('/api', (_req, res) =>
   res.status(404).json({ message: 'Endpoint not found.' })
 );
 
 /* =========================================================
-   Serve the built frontend (production only)
+   3. Serve the built frontend (must come AFTER API routes)
    ========================================================= */
 const clientDist = path.resolve(__dirname, '..', 'client', 'dist');
 
@@ -114,18 +105,24 @@ app.use(express.static(clientDist, {
   maxAge: '1h'
 }));
 
-// React Router fallback — send index.html for any non-API route
+// React Router fallback — send index.html for any non-API, non-uploads route
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) return next();
   if (req.path.startsWith('/uploads')) return next();
 
-  res.sendFile(path.join(clientDist, 'index.html'), (err) => {
-    if (err) next();
+  const indexPath = path.join(clientDist, 'index.html');
+
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error('❌ Failed to serve index.html:', err.message);
+      console.error('   Looked in:', indexPath);
+      res.status(500).send('Frontend not built. Run the client build first.');
+    }
   });
 });
 
 /* =========================================================
-   Central error handler
+   4. Central error handler
    ========================================================= */
 app.use((err, _req, res, _next) => {
   console.error('❌ Server error:', err);
@@ -136,7 +133,7 @@ app.use((err, _req, res, _next) => {
 });
 
 /* =========================================================
-   Start the server
+   5. Start the server
    ========================================================= */
 const PORT = process.env.PORT || 5000;
 
@@ -145,6 +142,18 @@ connectDB(process.env.MONGODB_URI)
     app.listen(PORT, () => {
       console.log(`🚀 Server running at http://localhost:${PORT}`);
       console.log(`📁 Serving frontend from: ${clientDist}`);
+
+      // Warn if the frontend isn't built
+      import('fs').then(({ default: fs }) => {
+        const indexPath = path.join(clientDist, 'index.html');
+        if (!fs.existsSync(indexPath)) {
+          console.warn(`⚠️  index.html not found at ${indexPath}`);
+          console.warn(`   All routes will return 500 until the client is built.`);
+          console.warn(`   Build command: cd ../client && npm install && npm run build`);
+        } else {
+          console.log(`✅ Frontend found at ${indexPath}`);
+        }
+      });
     });
   })
   .catch((err) => {
