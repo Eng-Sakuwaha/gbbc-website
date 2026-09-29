@@ -3,8 +3,17 @@ import api from '../services/api';
 
 export default function About() {
   const [s, setS] = useState(null);
-  useEffect(() => { api.get('/church/settings').then(r => setS(r.data)); }, []);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.get('/church/settings')
+      .then((r) => setS(r.data && typeof r.data === 'object' ? r.data : null))
+      .catch(() => setError('Unable to load information right now.'));
+  }, []);
+
+  if (error) return <div className="section container"><p className="error">{error}</p></div>;
   if (!s) return <div className="section container">Loading…</div>;
+
   return (
     <div className="section container">
       <h1>About Us</h1>

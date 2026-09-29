@@ -2,55 +2,32 @@ import { useEffect, useState } from 'react';
 import { FaWhatsapp, FaFacebookF, FaEnvelope } from 'react-icons/fa';
 import api from '../services/api';
 
-const WHATSAPP_NUMBER = '260969172928';
-const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-  'Hello Grace Bible Baptist Church Kitwe, I would like to know more.'
-)}`;
-
+const WHATSAPP_LINK = 'https://wa.me/260969172928';
 const FACEBOOK_LINK = 'https://www.facebook.com/share/1DkEgAXFJx/?mibextid=wwXIfr';
 const CHURCH_EMAIL = 'gracebiblebaptistchurchkitwe@gmail.com';
-
 const WEB3FORMS_ACCESS_KEY = 'e4c9aba3-acb0-43cc-b818-c6f7163e1906';
 
 export default function Contact() {
   const [s, setS] = useState(null);
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    subject: '',
-    message: ''
-  });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
   const [status, setStatus] = useState(null);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    api.get('/church/settings').then((r) => setS(r.data));
+    api.get('/church/settings')
+      .then((r) => setS(r.data && typeof r.data === 'object' ? r.data : null))
+      .catch(() => setS(null));
   }, []);
 
   const submit = async (e) => {
     e.preventDefault();
     setStatus(null);
-
-    if (!WEB3FORMS_ACCESS_KEY) {
-      setStatus({
-        type: 'error',
-        text: 'Contact form is not configured yet. Please contact us on WhatsApp.'
-      });
-      return;
-    }
-
     setSending(true);
-
     try {
       api.post('/contact', form).catch(() => {});
-
       const res = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           access_key: WEB3FORMS_ACCESS_KEY,
           subject: `New contact message: ${form.subject || form.name}`,
@@ -62,23 +39,12 @@ export default function Contact() {
           replyto: form.email
         })
       });
-
       const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Web3Forms rejected the request');
-      }
-
-      setStatus({
-        type: 'success',
-        text: 'Your message has been sent. God bless you!'
-      });
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed');
+      setStatus({ type: 'success', text: 'Your message has been sent. God bless you!' });
       setForm({ name: '', email: '', phone: '', subject: '', message: '' });
     } catch {
-      setStatus({
-        type: 'error',
-        text: 'Unable to send message right now. Please try again or contact us on WhatsApp.'
-      });
+      setStatus({ type: 'error', text: 'Unable to send message. Please try again or contact us on WhatsApp.' });
     } finally {
       setSending(false);
     }
@@ -93,41 +59,28 @@ export default function Contact() {
       <div className="contact-grid">
         <div>
           <h2>Grace Bible Baptist Church Kitwe</h2>
-          <p><strong>Location:</strong><br />{s?.address}</p>
+          <p><strong>Location:</strong><br />{s?.address || 'Nkana East, near CBU East Gate, Kitwe, Zambia'}</p>
 
           {s?.phone && <p><strong>Phone:</strong> {s.phone}</p>}
 
           <p>
             <strong>Email:</strong>{' '}
             <a className="contact-email" href={`mailto:${email}`}>
-              <FaEnvelope aria-hidden="true" />
-              <span>{email}</span>
+              <FaEnvelope aria-hidden="true" /><span>{email}</span>
             </a>
           </p>
 
           <p>
             <strong>WhatsApp:</strong>{' '}
-            <a
-              className="contact-whatsapp"
-              href={WHATSAPP_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <FaWhatsapp aria-hidden="true" />
-              <span>+260 969 172 928</span>
+            <a className="contact-whatsapp" href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+              <FaWhatsapp aria-hidden="true" /><span>+260 969 172 928</span>
             </a>
           </p>
 
           <p>
             <strong>Facebook:</strong>{' '}
-            <a
-              className="contact-facebook"
-              href={FACEBOOK_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <FaFacebookF aria-hidden="true" />
-              <span>Grace Bible Baptist Church Kitwe</span>
+            <a className="contact-facebook" href={FACEBOOK_LINK} target="_blank" rel="noopener noreferrer">
+              <FaFacebookF aria-hidden="true" /><span>Grace Bible Baptist Church Kitwe</span>
             </a>
           </p>
 
@@ -153,46 +106,16 @@ export default function Contact() {
         </div>
 
         <form className="contact-form" onSubmit={submit}>
-          <input
-            className="input"
-            name="name"
-            placeholder="Full Name"
-            required
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-          <input
-            className="input"
-            name="email"
-            type="email"
-            placeholder="Email"
-            required
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-          <input
-            className="input"
-            name="phone"
-            placeholder="Phone"
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          />
-          <input
-            className="input"
-            name="subject"
-            placeholder="Subject"
-            value={form.subject}
-            onChange={(e) => setForm({ ...form, subject: e.target.value })}
-          />
-          <textarea
-            className="input"
-            name="message"
-            rows="5"
-            placeholder="Message"
-            required
-            value={form.message}
-            onChange={(e) => setForm({ ...form, message: e.target.value })}
-          />
+          <input className="input" placeholder="Full Name" required
+            value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <input className="input" type="email" placeholder="Email" required
+            value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <input className="input" placeholder="Phone"
+            value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <input className="input" placeholder="Subject"
+            value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
+          <textarea className="input" rows="5" placeholder="Message" required
+            value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
           <button className="btn-primary" type="submit" disabled={sending}>
             {sending ? 'Sending…' : 'Send Message'}
           </button>

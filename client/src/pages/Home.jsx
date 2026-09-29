@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../services/api';
+import api, { asArray, resolveMediaUrl } from '../services/api';
 import HeroSlider from '../components/HeroSlider.jsx';
 import Countdown from '../components/Countdown.jsx';
 
@@ -12,22 +12,35 @@ export default function Home() {
   const [announcement, setAnnouncement] = useState(null);
 
   useEffect(() => {
-    api.get('/church/settings').then((r) => setSettings(r.data)).catch(() => {});
-    api.get('/activities').then((r) => setActivities(r.data.slice(0, 4))).catch(() => {});
+    api.get('/church/settings')
+      .then((r) => setSettings(r.data && typeof r.data === 'object' ? r.data : null))
+      .catch(() => setSettings(null));
+
+    api.get('/activities')
+      .then((r) => setActivities(asArray(r.data).slice(0, 4)))
+      .catch(() => setActivities([]));
+
     api.get('/sermons')
-      .then((r) => setSermon(r.data.find((s) => s.isFeatured) || r.data[0]))
-      .catch(() => {});
+      .then((r) => {
+        const list = asArray(r.data);
+        setSermon(list.find((s) => s.isFeatured) || list[0] || null);
+      })
+      .catch(() => setSermon(null));
+
     api.get('/events')
       .then((r) => {
         const now = Date.now();
-        const upcoming = r.data
-          .filter((e) => new Date(e.date).getTime() >= now)
+        const upcoming = asArray(r.data)
+          .filter((e) => e?.date && new Date(e.date).getTime() >= now)
           .sort((a, b) => new Date(a.date) - new Date(b.date))
           .slice(0, 3);
         setEvents(upcoming);
       })
-      .catch(() => {});
-    api.get('/announcements').then((r) => setAnnouncement(r.data[0])).catch(() => {});
+      .catch(() => setEvents([]));
+
+    api.get('/announcements')
+      .then((r) => setAnnouncement(asArray(r.data)[0] || null))
+      .catch(() => setAnnouncement(null));
   }, []);
 
   return (
@@ -38,8 +51,9 @@ export default function Home() {
           <h1>Grace Bible Baptist Church Kitwe</h1>
           <p className="motto">Loving God. Loving Others.</p>
           <p className="lead">
-            A Christ-centered Baptist church committed to faithfully proclaiming God&apos;s Word,
-            growing believers in Christ, and loving others through Christian fellowship and service.
+            A Christ-centered Baptist church committed to faithfully proclaiming
+            God&apos;s Word, growing believers in Christ, and loving others through
+            Christian fellowship and service.
           </p>
           <div className="cta-row">
             <Link className="btn-primary" to="/contact">Join Us This Sunday</Link>
@@ -102,7 +116,11 @@ export default function Home() {
               <article className="event-card" key={e._id}>
                 {e.image && (
                   <div className="event-image">
-                    <img src={e.image} alt={e.title} loading="lazy" />
+                    <img
+                      src={resolveMediaUrl(e.image)}
+                      alt={e.title}
+                      loading="lazy"
+                    />
                   </div>
                 )}
                 <div className="event-body">
@@ -112,7 +130,6 @@ export default function Home() {
                     {e.startTime && <> · {e.startTime}</>}
                   </p>
                   {e.location && <p className="event-location muted">{e.location}</p>}
-
                   {idx === 0 && e.showCountdown !== false && (
                     <Countdown date={e.date} startTime={e.startTime} />
                   )}
