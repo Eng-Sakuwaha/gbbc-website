@@ -6,6 +6,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import { startKeepAlive } from 'mongo-keepalive';
 import { connectDB } from './config/db.js';
 import routes from './routes/index.js';
 
@@ -29,7 +30,7 @@ app.use(helmet({
   contentSecurityPolicy: false
 }));
 
-// CORS — allow all origins (safe because we serve the frontend from the same domain)
+// CORS — allow all origins
 app.use(cors({
   origin: true,
   credentials: true
@@ -89,7 +90,7 @@ const apiLimiter = rateLimit({
 app.use('/api', apiLimiter);
 app.use('/api', routes);
 
-// 404 for unknown API routes (does not affect frontend routes)
+// 404 for unknown API routes
 app.use('/api', (_req, res) =>
   res.status(404).json({ message: 'Endpoint not found.' })
 );
@@ -99,7 +100,6 @@ app.use('/api', (_req, res) =>
    ========================================================= */
 const clientDist = path.resolve(__dirname, '..', 'client', 'dist');
 
-// Static assets: JS, CSS, images, hero slides
 app.use(express.static(clientDist, {
   index: false,
   maxAge: '1h'
@@ -139,6 +139,29 @@ const PORT = process.env.PORT || 5000;
 
 connectDB(process.env.MONGODB_URI)
   .then(() => {
+    // ---------------------------------------------------
+    // Keep MongoDB Atlas alive — prevents free-tier sleep
+    // after 60 days of inactivity.
+    // ---------------------------------------------------
+    try {
+      startKeepAlive({
+        uri: process.env.MONGODB_URI,
+        interval: '12h'  // ping every 12 hours
+      })
+        .then(() => {
+          console.log('✅ MongoDB keep-alive service started (12h interval)');
+        })
+        .catch((err) => {
+          console.warn('⚠️  MongoDB keep-alive failed to start:', err.message);
+          console.warn('   The app will still work, but the cluster may pause after 60 days.');
+        });
+    } catch (err) {
+      console.warn('⚠️  MongoDB keep-alive threw synchronously:', err.message);
+    }
+
+    // ---------------------------------------------------
+    // Start the HTTP server
+    // ---------------------------------------------------
     app.listen(PORT, () => {
       console.log(`🚀 Server running at http://localhost:${PORT}`);
       console.log(`📁 Serving frontend from: ${clientDist}`);
