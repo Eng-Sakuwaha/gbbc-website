@@ -25,6 +25,7 @@ import ProtectedRoute from './admin/ProtectedRoute.jsx';
 export default function App() {
   return (
     <Routes>
+      {/* ---------- Public routes (with header/footer) ---------- */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
@@ -39,37 +40,111 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Route>
 
+      {/* ---------- Admin login (standalone, no layout) ---------- */}
       <Route path="/admin/login" element={<AdminLogin />} />
+
+      {/* ---------- Admin dashboard (protected) ---------- */}
       <Route
         path="/admin"
         element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}
       >
         <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
+
         <Route
           path="leaders"
-          element={<AdminCollection resource="leaders" fields={['name','position','biography','photo','ministry','bibleVerse','displayOrder','isActive']} />}
+          element={
+            <AdminCollection
+              resource="leaders"
+              fields={[
+                'name',
+                'position',
+                'biography',
+                'photo',
+                'ministry',
+                'bibleVerse',
+                'displayOrder',
+                'isActive'
+              ]}
+            />
+          }
         />
+
         <Route
           path="sermons"
-          element={<AdminCollection resource="sermons" fields={['title','speaker','scripture','bibleBook','category','description','sermonDate','youtubeUrl','audioUrl','thumbnail','isFeatured','status']} />}
+          element={
+            <AdminCollection
+              resource="sermons"
+              fields={[
+                'title',
+                'speaker',
+                'scripture',
+                'bibleBook',
+                'category',
+                'description',
+                'sermonDate',
+                'youtubeUrl',
+                'audioUrl',
+                'thumbnail',
+                'isFeatured',
+                'status'
+              ]}
+            />
+          }
         />
+
         <Route
           path="events"
-          element={<AdminCollection resource="events" fields={['title','description','date','startTime','endTime','location','image','registrationUrl','isFeatured','showCountdown','status']} />}
+          element={
+            <AdminCollection
+              resource="events"
+              fields={[
+                'title',
+                'description',
+                'date',
+                'startTime',
+                'endTime',
+                'location',
+                'image',
+                'registrationUrl',
+                'isFeatured',
+                'showCountdown',
+                'status'
+              ]}
+            />
+          }
         />
+
         <Route
           path="announcements"
-          element={<AdminCollection resource="announcements" fields={['title','summary','content','author','status','isFeatured']} />}
+          element={
+            <AdminCollection
+              resource="announcements"
+              fields={['title', 'summary', 'content', 'author', 'status', 'isFeatured']}
+            />
+          }
         />
+
         <Route
           path="activities"
-          element={<AdminCollection resource="activities" fields={['title','day','startTime','endTime','location','description','isActive']} />}
+          element={
+            <AdminCollection
+              resource="activities"
+              fields={['title', 'day', 'startTime', 'endTime', 'location', 'description', 'isActive']}
+            />
+          }
         />
+
         <Route
           path="ministries"
-          element={<AdminCollection resource="ministries" fields={['name','description','leader','schedule','contact','isActive']} />}
+          element={
+            <AdminCollection
+              resource="ministries"
+              fields={['name', 'description', 'leader', 'schedule', 'contact', 'isActive']}
+            />
+          }
         />
+
         <Route path="messages" element={<AdminMessages />} />
         <Route path="media" element={<AdminMedia />} />
         <Route path="profile" element={<AdminProfile />} />

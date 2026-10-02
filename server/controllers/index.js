@@ -89,13 +89,32 @@ export const updateSettings = async (req, res) => {
 };
 
 /* ---------------- GENERIC CRUD ---------------- */
-export const makeCrud = (Model, { activeField, publicFilter } = {}) => ({
+/**
+ * makeCrud creates CRUD handlers for a model.
+ *
+ * Options:
+ *   activeField – e.g. 'isActive'. Public GET requests filter to only
+ *                 documents where this field is true.
+ *   publicFilter – e.g. { status: 'published' }. Extra filter applied
+ *                 to public GET requests.
+ *   sortField   – e.g. 'displayOrder'. Field used for sorting.
+ *                 Sorted ascending when the field is 'displayOrder',
+ *                 otherwise descending (newest first).
+ */
+export const makeCrud = (Model, { activeField, publicFilter, sortField } = {}) => ({
   list: async (req, res) => {
     try {
       const q = {};
       if (activeField && !req.user) q[activeField] = true;
       if (publicFilter && !req.user) Object.assign(q, publicFilter);
-      const items = await Model.find(q).sort({ createdAt: -1 });
+
+      // Sort by sortField if provided, else by createdAt.
+      // displayOrder sorts ascending (1, 2, 3...), everything else
+      // sorts descending (newest first).
+      const sortBy = sortField || 'createdAt';
+      const sortDir = sortField === 'displayOrder' ? 1 : -1;
+
+      const items = await Model.find(q).sort({ [sortBy]: sortDir });
       res.json(Array.isArray(items) ? items : []);
     } catch (e) {
       console.error('list error:', e);
@@ -161,7 +180,6 @@ export const submitContact = async (req, res) => {
 
     const msg = await ContactMessage.create(req.body);
 
-    // Fire-and-forget optional email notification.
     sendContactNotification(msg).catch((e) =>
       console.warn('Email notification skipped:', e.message)
     );

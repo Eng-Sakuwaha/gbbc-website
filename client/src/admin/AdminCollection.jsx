@@ -4,6 +4,7 @@ import FileUploadField from '../components/FileUploadField.jsx';
 
 const IMAGE_FIELDS = new Set(['photo', 'image', 'thumbnail', 'logo']);
 const AUDIO_FIELDS = new Set(['audioUrl', 'audio']);
+const NUMBER_FIELDS = new Set(['displayOrder', 'order', 'sortOrder']);
 
 export default function AdminCollection({ resource, fields }) {
   const [items, setItems] = useState([]);
@@ -38,6 +39,7 @@ export default function AdminCollection({ resource, fields }) {
       onChange: (v) => setForm({ ...form, [f]: v })
     };
 
+    /* --- File uploads --- */
     if (IMAGE_FIELDS.has(f)) {
       return (
         <FileUploadField
@@ -61,6 +63,7 @@ export default function AdminCollection({ resource, fields }) {
       );
     }
 
+    /* --- Checkboxes --- */
     if (f === 'isActive' || f === 'isFeatured') {
       return (
         <label key={f}>
@@ -74,6 +77,31 @@ export default function AdminCollection({ resource, fields }) {
       );
     }
 
+    /* --- Number inputs (displayOrder, order, sortOrder) --- */
+    if (NUMBER_FIELDS.has(f)) {
+      return (
+        <label key={f}>
+          <span>{titleCase(f)}</span>
+          <input
+            className="input"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="0"
+            value={form[f] ?? 0}
+            onChange={(e) => {
+              const v = e.target.value === '' ? 0 : Number(e.target.value);
+              setForm({ ...form, [f]: v });
+            }}
+          />
+          <small className="muted">
+            Lower numbers appear first (e.g. 1, 2, 3…)
+          </small>
+        </label>
+      );
+    }
+
+    /* --- Textareas --- */
     if (f === 'description' || f === 'content' || f === 'biography') {
       return (
         <label key={f}>
@@ -88,6 +116,7 @@ export default function AdminCollection({ resource, fields }) {
       );
     }
 
+    /* --- Date inputs --- */
     if (f === 'date' || f === 'sermonDate') {
       return (
         <label key={f}>
@@ -102,6 +131,7 @@ export default function AdminCollection({ resource, fields }) {
       );
     }
 
+    /* --- Default: text input --- */
     return (
       <label key={f}>
         <span>{titleCase(f)}</span>
@@ -140,6 +170,7 @@ export default function AdminCollection({ resource, fields }) {
       <table className="admin-table">
         <thead>
           <tr>
+            <th>Order</th>
             <th>Summary</th>
             <th>Media</th>
             <th>Actions</th>
@@ -148,6 +179,7 @@ export default function AdminCollection({ resource, fields }) {
         <tbody>
           {items.map((it) => (
             <tr key={it._id}>
+              <td>{Number.isFinite(it.displayOrder) ? it.displayOrder : '—'}</td>
               <td>{it.title || it.name}</td>
               <td>
                 {it.photo && <img className="thumb" src={it.photo} alt="" />}
@@ -162,7 +194,7 @@ export default function AdminCollection({ resource, fields }) {
             </tr>
           ))}
           {!items.length && (
-            <tr><td colSpan="3" className="muted">No records yet.</td></tr>
+            <tr><td colSpan="4" className="muted">No records yet.</td></tr>
           )}
         </tbody>
       </table>

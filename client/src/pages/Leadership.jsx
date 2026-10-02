@@ -8,7 +8,16 @@ export default function Leadership() {
 
   useEffect(() => {
     api.get('/leaders')
-      .then((r) => setLeaders(asArray(r.data)))
+      .then((r) => {
+        // Sort by displayOrder ascending; fall back to name.
+        const list = asArray(r.data).slice().sort((a, b) => {
+          const aOrder = Number.isFinite(a.displayOrder) ? a.displayOrder : 9999;
+          const bOrder = Number.isFinite(b.displayOrder) ? b.displayOrder : 9999;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          return (a.name || '').localeCompare(b.name || '');
+        });
+        setLeaders(list);
+      })
       .catch(() => setError('Unable to load leadership right now.'))
       .finally(() => setLoading(false));
   }, []);
@@ -22,7 +31,9 @@ export default function Leadership() {
       <div className="grid">
         {leaders.map((l) => (
           <div className="card leader-card" key={l._id}>
-            {l.photo && <img src={resolveMediaUrl(l.photo)} alt={l.name} loading="lazy" />}
+            {l.photo && (
+              <img src={resolveMediaUrl(l.photo)} alt={l.name} loading="lazy" />
+            )}
             <h3>{l.name}</h3>
             <p className="role">{l.position}</p>
             <p>{l.biography}</p>
